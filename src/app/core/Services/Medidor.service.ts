@@ -6,7 +6,7 @@ import { medidor } from '../Models/medidor.model';
 
 @Injectable({ providedIn: 'root' })
 export class MedidorService {
-    private url = `${environment.apiUrl}/medidor`;
+    private url = `${environment.apiUrl}/medidores`;
 
     constructor(private http: HttpClient) {}
 

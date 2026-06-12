@@ -114,7 +114,7 @@
                 </td>
                 <td>{{ fac.periodo }}</td>
                 <td>{{ fac.fechaEmision | date:'dd/MM/yyyy' }}</td>
-                <td>{{ fac.historialConsumo?.metrosConsumidos || 0 }} m³</td>
+                <td>{{ fac.consumo !== null && fac.consumo !== undefined ? fac.consumo : 0 }} m³</td>
                 <td class="invoice-amount">{{ fac.totalPagar | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
                 <td>
                   <span class="badge-status" [class.active]="fac.estado === 1" [class.suspended]="fac.estado === 0">

@@ -21,4 +21,12 @@ export class LecturaService {
     buscarPorMedidor(idMedidor: number) {
         return this.http.get<Lectura[]>(`${this.url}/medidor/${idMedidor}`);
     }
+
+    actualizar(id: number, lectura: Lectura) {
+        return this.http.put<Lectura>(`${this.url}/${id}`, lectura);
+    }
+
+    eliminar(id: number) {
+        return this.http.delete<void>(`${this.url}/${id}`);
+    }
 }

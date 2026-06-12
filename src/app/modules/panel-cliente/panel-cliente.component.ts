@@ -165,14 +165,15 @@ export class PanelClienteComponent implements OnInit {
     // Valores Tabla
     doc.setTextColor(50, 50, 50);
     doc.setFont('helvetica', 'normal');
-    const hc = factura.historialConsumo;
-    const lecAct = hc?.lecturaActual || this.cliente.lectura || 0;
-    const m3Consumidos = hc?.metrosConsumidos || 0;
-    const lecAnt = Math.max(0, lecAct - m3Consumidos);
+    const lecAct = factura.lecturaNueva !== null && factura.lecturaNueva !== undefined ? Number(factura.lecturaNueva) : (this.cliente.lectura || 0);
+    const m3Consumidos = factura.consumo !== null && factura.consumo !== undefined ? Number(factura.consumo) : 0;
+    const lecAnt = factura.lecturaAnterior !== null && factura.lecturaAnterior !== undefined ? Number(factura.lecturaAnterior) : Math.max(0, lecAct - m3Consumidos);
+    const valorCuota = factura.valorCuota !== null && factura.valorCuota !== undefined ? Number(factura.valorCuota) : 0;
     
-    // Buscar tarifa
+    // Buscar tarifa (base rate of 1500 COP)
     const total = factura.totalPagar || 0;
-    const precioMetro = m3Consumidos > 0 ? Math.round(total / m3Consumidos) : 2000;
+    const precioMetro = 1500;
+    const costoConsumo = m3Consumidos * precioMetro;
 
     doc.text(`${lecAnt.toFixed(1)} m³`, 20, 124);
     doc.text(`${lecAct.toFixed(1)} m³`, 70, 124);
@@ -184,15 +185,26 @@ export class PanelClienteComponent implements OnInit {
     doc.setFont('helvetica', 'bold');
     doc.text('Liquidación de Pago:', 120, 140);
     doc.setFont('helvetica', 'normal');
-    doc.text('Cargo por Consumo:', 120, 146);
-    doc.text(`$${total.toLocaleString('es-CO')}`, 170, 146);
+    
+    let currentY = 146;
+    doc.text('Cargo por Consumo:', 120, currentY);
+    doc.text(`$${costoConsumo.toLocaleString('es-CO')}`, 170, currentY);
+    currentY += 6;
+
+    if (valorCuota > 0) {
+      doc.text('Cuota Financiación:', 120, currentY);
+      doc.text(`$${valorCuota.toLocaleString('es-CO')}`, 170, currentY);
+      currentY += 8;
+    } else {
+      currentY += 2;
+    }
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.setTextColor(navy[0], navy[1], navy[2]);
-    doc.text('Total a Pagar:', 120, 155);
+    doc.text('Total a Pagar:', 120, currentY);
     doc.setTextColor(0, 102, 0); // Green
-    doc.text(`$${total.toLocaleString('es-CO')} COP`, 170, 155);
+    doc.text(`$${total.toLocaleString('es-CO')} COP`, 170, currentY);
 
     // Estado de la Factura (Sello)
     const pagada = factura.estado === 1;
