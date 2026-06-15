@@ -9,6 +9,8 @@ import { FacturaService, Factura } from '../../core/Services/Factura.service';
 import { Cliente } from '../../core/Models/Cliente.model';
 import { HistorialConsumo } from '../../core/Models/historialConsumo.model';
 import { Financiacion } from '../../core/Models/financiacion.model';
+import { LecturaService } from '../../core/Services/Lectura.service';
+import { Lectura } from '../../core/Models/lectura.model';
 
 @Component({
   selector: 'app-administrador',
@@ -56,6 +58,14 @@ export class AdministradorComponent implements OnInit {
   // Facturas y formulario de creación
   facturasGlobales: Factura[] = [];
   facturaForm: FormGroup;
+  
+  // Variables de UI
+  mostrarFormFinan = false;
+
+  // Lecturas CRUD
+  lecturasGlobales: Lectura[] = [];
+  lecturaCrudForm: FormGroup;
+  editandoLecturaId: number | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -63,7 +73,8 @@ export class AdministradorComponent implements OnInit {
     private historialService: HistorialConsumoService,
     private pagosService: PagosService,
     private finanService: FinanciacionService,
-    private facturaService: FacturaService
+    private facturaService: FacturaService,
+    private lecturaService: LecturaService
   ) {
     // Inicializar Formulario de Clientes
     this.clienteForm = this.fb.group({
@@ -110,6 +121,15 @@ export class AdministradorComponent implements OnInit {
       zona: [''],
       consumo: [{ value: 0, disabled: true }],
       totalPagar: [{ value: 0, disabled: true }]
+    });
+
+    this.lecturaCrudForm = this.fb.group({
+      idLectura: [null],
+      idMedidor: [null, [Validators.required, Validators.min(1)]],
+      valorLectura: [0, [Validators.required, Validators.min(0)]],
+      fechaToma: ['', Validators.required],
+      observaciones: [''],
+      idOperador: [1]
     });
 
     this.setupFacturaCalculations();
@@ -240,6 +260,9 @@ export class AdministradorComponent implements OnInit {
     } else if (view === 'facturas') {
       this.clienteSeleccionado = null;
       this.cargarFacturas();
+    } else if (view === 'lecturas') {
+      this.clienteSeleccionado = null;
+      this.cargarLecturasGlobales();
     }
   }
 
@@ -444,12 +467,13 @@ export class AdministradorComponent implements OnInit {
     if (this.finanForm.invalid || !this.clienteSeleccionado) return;
 
     const val = this.finanForm.value;
-    const payload: Financiacion = {
+    const payload: any = {
       concepto: val.concepto,
+      numeroCuotas: val.numeroCuotas,
       numero_cuotas: val.numeroCuotas,
       montoTotal: val.montoTotal,
       cuotaMensual: val.cuotaMensual,
-      saldoPendiente: val.saldoPendiente,
+      saldoPendiente: val.montoTotal,
       cliente: { id_cli: this.clienteSeleccionado.id_cli || this.clienteSeleccionado.id },
       administrador: { id_adm: 3 },
       presidente: { id_presi: 6 }
@@ -459,6 +483,7 @@ export class AdministradorComponent implements OnInit {
       next: () => {
         this.mensaje = 'Acuerdo de financiación registrado exitosamente.';
         this.finanForm.reset({ concepto: '', montoTotal: 0, numeroCuotas: 6, cuotaMensual: 0, saldoPendiente: 0 });
+        this.mostrarFormFinan = false;
         this.cargarDetallesCliente();
       },
       error: () => {
@@ -607,5 +632,120 @@ export class AdministradorComponent implements OnInit {
   cerrarMensajes() {
     this.mensaje = '';
     this.error = '';
+  }
+
+  irARegistrarLectura(cliente: Cliente | null) {
+    if (!cliente) return;
+    this.setView('lecturas');
+    this.editandoLecturaId = null;
+    this.lecturaCrudForm.reset({
+      idLectura: null,
+      idMedidor: cliente.numeroMedidor || null,
+      valorLectura: 0,
+      fechaToma: new Date().toISOString().substring(0, 10),
+      observaciones: '',
+      idOperador: 1
+    });
+  }
+
+  cargarLecturasGlobales() {
+    this.cargando = true;
+    this.lecturaService.listar().subscribe({
+      next: (data) => {
+        this.lecturasGlobales = data;
+        this.cargando = false;
+      },
+      error: () => {
+        this.error = 'Error al cargar las lecturas de medidor.';
+        this.cargando = false;
+      }
+    });
+  }
+
+  abrirEditarLectura(lec: Lectura) {
+    this.editandoLecturaId = lec.idLectura || (lec as any).id_lec || null;
+    this.lecturaCrudForm.patchValue({
+      idLectura: this.editandoLecturaId,
+      idMedidor: lec.idMedidor,
+      valorLectura: lec.valorLectura,
+      fechaToma: lec.fechaToma ? new Date(lec.fechaToma).toISOString().substring(0, 10) : '',
+      observaciones: lec.observaciones,
+      idOperador: lec.idOperador || 1
+    });
+  }
+
+  cancelarEdicionLectura() {
+    this.editandoLecturaId = null;
+    this.lecturaCrudForm.reset({
+      idLectura: null,
+      idMedidor: null,
+      valorLectura: 0,
+      fechaToma: new Date().toISOString().substring(0, 10),
+      observaciones: '',
+      idOperador: 1
+    });
+  }
+
+  guardarLecturaCrud() {
+    if (this.lecturaCrudForm.invalid) {
+      this.lecturaCrudForm.markAllAsTouched();
+      return;
+    }
+    const val = this.lecturaCrudForm.value;
+    const payload: Lectura = {
+      valorLectura: val.valorLectura,
+      fechaToma: val.fechaToma,
+      observaciones: val.observaciones,
+      idMedidor: val.idMedidor,
+      idOperador: val.idOperador || 1
+    };
+
+    this.cargando = true;
+    this.cerrarMensajes();
+
+    if (this.editandoLecturaId) {
+      this.lecturaService.actualizar(this.editandoLecturaId, payload).subscribe({
+        next: () => {
+          this.mensaje = 'Lectura actualizada correctamente.';
+          this.cargarLecturasGlobales();
+          this.cancelarEdicionLectura();
+        },
+        error: () => {
+          this.error = 'Error al actualizar la lectura de medidor.';
+          this.cargando = false;
+        }
+      });
+    } else {
+      this.lecturaService.crear(payload).subscribe({
+        next: () => {
+          this.mensaje = 'Lectura registrada correctamente. Se ha generado la factura del mes de forma automática.';
+          this.cargarLecturasGlobales();
+          this.cancelarEdicionLectura();
+        },
+        error: () => {
+          this.error = 'Error al registrar la lectura de medidor.';
+          this.cargando = false;
+        }
+      });
+    }
+  }
+
+  eliminarLectura(lec: Lectura) {
+    const id = lec.idLectura || (lec as any).id_lec;
+    if (!id) return;
+    if (confirm('¿Estás seguro de que deseas eliminar permanentemente esta lectura de medidor?')) {
+      this.cargando = true;
+      this.cerrarMensajes();
+      this.lecturaService.eliminar(id).subscribe({
+        next: () => {
+          this.mensaje = 'Lectura de medidor eliminada correctamente.';
+          this.cargarLecturasGlobales();
+        },
+        error: () => {
+          this.error = 'No se pudo eliminar la lectura de medidor.';
+          this.cargando = false;
+        }
+      });
+    }
   }
 }

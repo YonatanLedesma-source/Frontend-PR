@@ -6,4 +6,6 @@ export interface Financiacion {
     montoTotal?: number;
     cuotaMensual?: number;
     saldoPendiente?: number;
+    cliente?: any;
+    administrador?: any;
 }

@@ -1,3 +1,5 @@
+import { Cliente } from './Cliente.model';
+
 export interface Lectura {
     idLectura?: number;
     valorLectura: number;
@@ -5,4 +7,5 @@ export interface Lectura {
     observaciones: string;
     idMedidor: number; // Para saber de qué casa es la lectura
     idOperador: number; // Para saber qué fontanero la tomó
+    cliente?: Cliente;
 }
