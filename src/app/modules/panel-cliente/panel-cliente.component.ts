@@ -191,7 +191,32 @@ export class PanelClienteComponent implements OnInit {
     doc.text(`$${costoConsumo.toLocaleString('es-CO')}`, 170, currentY);
     currentY += 6;
 
-    if (valorCuota > 0) {
+    if (valorCuota > 0 && factura.financiacion) {
+      doc.setFontSize(8);
+      doc.setTextColor(gray[0], gray[1], gray[2]);
+      const concepto = factura.financiacion.concepto || 'Convenio';
+      doc.text(concepto.substring(0, 25) + (concepto.length > 25 ? '...' : ''), 120, currentY);
+      doc.setFontSize(9);
+      doc.setTextColor(50, 50, 50);
+      currentY += 5;
+      doc.text('Cuota Financiación:', 120, currentY);
+      doc.text(`$${valorCuota.toLocaleString('es-CO')}`, 170, currentY);
+      currentY += 5;
+      
+      const saldo = factura.financiacion.saldoPendiente || 0;
+      const pagadaStr = factura.estado === 1 ? 'PAGADA' : (saldo === 0 ? 'FINALIZADO' : 'PENDIENTE');
+      doc.text('Estado Cuota:', 120, currentY);
+      doc.text(pagadaStr, 170, currentY);
+      currentY += 5;
+      
+      doc.text('Saldo Restante:', 120, currentY);
+      doc.text(`$${saldo.toLocaleString('es-CO')}`, 170, currentY);
+      currentY += 5;
+      
+      doc.text('Cuotas Restantes:', 120, currentY);
+      doc.text(`${factura.financiacion.numeroCuotas || 0}`, 170, currentY);
+      currentY += 6;
+    } else if (valorCuota > 0) {
       doc.text('Cuota Financiación:', 120, currentY);
       doc.text(`$${valorCuota.toLocaleString('es-CO')}`, 170, currentY);
       currentY += 8;

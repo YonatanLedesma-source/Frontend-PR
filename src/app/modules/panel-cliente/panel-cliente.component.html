@@ -102,6 +102,7 @@
                 <th>Periodo</th>
                 <th>Fecha de Emisión</th>
                 <th>Consumo</th>
+                <th>Convenio</th>
                 <th>Total a Pagar</th>
                 <th>Estado</th>
                 <th class="text-center">Acciones</th>
@@ -114,7 +115,24 @@
                 </td>
                 <td>{{ fac.periodo }}</td>
                 <td>{{ fac.fechaEmision | date:'dd/MM/yyyy' }}</td>
-                <td>{{ fac.consumo !== null && fac.consumo !== undefined ? fac.consumo : 0 }} m³</td>
+                <td>
+                  {{ fac.consumo !== null && fac.consumo !== undefined ? fac.consumo : 0 }} m³
+                  <span class="d-block text-muted font-size-xs mt-1" *ngIf="fac.totalPagar != null && fac.valorCuota != null" style="font-size: 0.75rem;">
+                    $ {{ (fac.totalPagar - fac.valorCuota) | number:'1.0-0' }}
+                  </span>
+                </td>
+                <td>
+                  <div *ngIf="fac.financiacion">
+                    <span class="d-block font-size-sm font-weight-bold text-dark text-truncate" style="max-width: 150px; font-size: 0.85rem;" [title]="fac.financiacion.concepto">{{ fac.financiacion.concepto }}</span>
+                    <span class="d-block text-muted font-size-xs" style="font-size: 0.75rem;">Cuota: {{ fac.valorCuota | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                    <span class="badge mt-1" 
+                          [ngClass]="fac.estado === 1 ? 'bg-success text-white' : (fac.financiacion.saldoPendiente === 0 ? 'bg-success text-white' : 'bg-warning text-dark')"
+                          style="font-size: 0.65rem; border-radius: 4px; padding: 2px 6px;">
+                      {{ fac.estado === 1 ? 'Cuota Pagada' : (fac.financiacion.saldoPendiente === 0 ? 'Finalizado' : 'Cuota Pendiente') }}
+                    </span>
+                  </div>
+                  <span *ngIf="!fac.financiacion" class="text-muted font-size-sm">-</span>
+                </td>
                 <td class="invoice-amount">{{ fac.totalPagar | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
                 <td>
                   <span class="badge-status" [class.active]="fac.estado === 1" [class.suspended]="fac.estado === 0">
@@ -129,7 +147,7 @@
                 </td>
               </tr>
               <tr *ngIf="facturas.length === 0">
-                <td colspan="7" class="empty-state">No tienes facturas emitidas registradas en el sistema.</td>
+                <td colspan="8" class="empty-state">No tienes facturas emitidas registradas en el sistema.</td>
               </tr>
             </tbody>
           </table>

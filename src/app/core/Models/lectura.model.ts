@@ -6,6 +6,7 @@ export interface Lectura {
     fechaToma: Date;
     observaciones: string;
     idMedidor: number; // Para saber de qué casa es la lectura
-    idOperador: number; // Para saber qué fontanero la tomó
+    idOperador?: number; // Para saber qué fontanero la tomó
     cliente?: Cliente;
+    medidor?: any;
 }

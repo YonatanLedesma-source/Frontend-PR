@@ -49,6 +49,12 @@
             <span>Financiaciones</span>
           </a>
         </li>
+        <li>
+          <a (click)="setView('pagos')" [class.active]="currentView === 'pagos'">
+            <i class="fas fa-receipt"></i>
+            <span>Pagos Recibidos</span>
+          </a>
+        </li>
       </ul>
     </nav>
 
@@ -76,6 +82,7 @@
         <h3 class="mb-0" *ngIf="currentView === 'crear-factura'">Generar Nueva Factura</h3>
         <h3 class="mb-0" *ngIf="currentView === 'lecturas'">Lecturas de Medidor</h3>
         <h3 class="mb-0" *ngIf="currentView === 'financiaciones'">Convenios de Financiación</h3>
+        <h3 class="mb-0" *ngIf="currentView === 'pagos'">Historial Global de Pagos</h3>
       </div>
       <div class="header-actions">
         <button class="btn btn-outline-primary btn-sm rounded-pill" *ngIf="currentView !== 'dashboard'" (click)="setView('dashboard')">
@@ -523,8 +530,16 @@
                 </div>
 
                 <!-- Formulario -->
-                <div class="p-4 bg-light rounded-4 border">
-                  <h6 class="font-weight-bold text-dark mb-3"><i class="fas fa-plus text-success me-1"></i> Registrar Recibo de Caja</h6>
+                <!-- Formulario Toggle -->
+                <div class="mb-3 text-end">
+                  <button class="btn btn-sm btn-outline-success text-dark font-weight-bold" (click)="mostrarFormPago = !mostrarFormPago">
+                    <i class="fas" [ngClass]="mostrarFormPago ? 'fa-times' : 'fa-plus'"></i> 
+                    {{ mostrarFormPago ? 'Cancelar' : 'Nuevo Pago' }}
+                  </button>
+                </div>
+                
+                <div class="p-4 bg-light rounded-4 border animate-fade-in" *ngIf="mostrarFormPago">
+                  <h6 class="font-weight-bold text-dark mb-3"><i class="fas fa-receipt text-success me-1"></i> Registrar Recibo de Caja</h6>
                   <form [formGroup]="pagoForm" (ngSubmit)="agregarPago()">
                     <div class="row g-3">
                       <div class="col-md-6">
@@ -631,6 +646,51 @@
         <div class="dashboard-table-card card-shadow p-4">
           <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
             <h5 class="mb-0 text-dark font-weight-bold"><i class="fas fa-hand-holding-usd text-warning me-2"></i>Todos los Convenios de Financiación</h5>
+            <button class="btn btn-sm btn-warning font-weight-bold text-dark" (click)="mostrarFormFinanGlobal = !mostrarFormFinanGlobal">
+              <i class="fas" [ngClass]="mostrarFormFinanGlobal ? 'fa-times' : 'fa-plus'"></i> 
+              {{ mostrarFormFinanGlobal ? 'Cancelar' : 'Nueva Financiación' }}
+            </button>
+          </div>
+
+          <!-- Formulario Global de Financiación -->
+          <div class="p-4 bg-light rounded-4 border mb-4 animate-fade-in" *ngIf="mostrarFormFinanGlobal">
+            <h6 class="font-weight-bold text-dark mb-3"><i class="fas fa-hand-holding-usd text-warning me-1"></i> {{ editandoFinanGlobalId ? 'Editar' : 'Registrar' }} Convenio de Financiación</h6>
+            <form [formGroup]="finanGlobalForm" (ngSubmit)="guardarFinanGlobal()">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label small font-weight-bold text-secondary">Cliente / Suscriptor</label>
+                  <select class="form-select form-select-sm" formControlName="clienteId">
+                    <option [ngValue]="null" disabled>Selecciona un cliente</option>
+                    <option *ngFor="let c of clientes" [ngValue]="c.id_cli || c.id">{{ c.nombre }} ({{ c.cedula }})</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small font-weight-bold text-secondary">Concepto</label>
+                  <input type="text" class="form-control form-control-sm" formControlName="concepto" placeholder="Ej: Deuda año 2023">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label small font-weight-bold text-secondary">Monto Total ($)</label>
+                  <input type="number" class="form-control form-control-sm" formControlName="montoTotal">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label small font-weight-bold text-secondary">Cuotas</label>
+                  <input type="number" class="form-control form-control-sm" formControlName="numeroCuotas">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label small font-weight-bold text-secondary">Valor Cuota ($)</label>
+                  <input type="number" class="form-control form-control-sm" formControlName="cuotaMensual">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label small font-weight-bold text-secondary">Saldo Pendiente ($)</label>
+                  <input type="number" class="form-control form-control-sm" formControlName="saldoPendiente">
+                </div>
+                <div class="col-12 text-end mt-3">
+                  <button type="submit" class="btn btn-sm btn-warning text-dark font-weight-bold" [disabled]="finanGlobalForm.invalid">
+                    <i class="fas fa-save me-1"></i> Guardar Convenio
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
 
           <div *ngIf="cargando" class="text-center py-5">
@@ -648,6 +708,7 @@
                   <th>Monto Total</th>
                   <th>Cuotas</th>
                   <th class="text-end">Saldo Pendiente</th>
+                  <th class="text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -659,9 +720,109 @@
                   <td class="text-end text-danger font-monospace font-weight-bold">
                     {{ (fin.saldoPendiente !== undefined ? fin.saldoPendiente : fin.montoTotal) | currency:'COP':'symbol-narrow':'1.0-0' }}
                   </td>
+                  <td class="text-center">
+                    <button class="btn btn-sm btn-light text-primary me-2" (click)="abrirEditarFinanGlobal(fin)" title="Editar">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light text-danger" (click)="eliminarFinanGlobal(fin.id_finan)" title="Eliminar">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </td>
                 </tr>
                 <tr *ngIf="financiacionesGlobales.length === 0">
-                  <td colspan="5" class="text-center py-5 text-muted">No se han registrado convenios de financiación.</td>
+                  <td colspan="6" class="text-center py-5 text-muted">No se han registrado convenios de financiación.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================= -->
+      <!-- VISTA: PAGOS GLOBALES                        -->
+      <!-- ============================================= -->
+      <div *ngIf="currentView === 'pagos'" class="animate-fade-in">
+        <div class="dashboard-table-card card-shadow p-4">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+            <h5 class="mb-0 text-dark font-weight-bold"><i class="fas fa-receipt text-success me-2"></i>Todos los Pagos y Recibos de Caja</h5>
+            <button class="btn btn-sm btn-success font-weight-bold" (click)="mostrarFormPagoGlobal = !mostrarFormPagoGlobal">
+              <i class="fas" [ngClass]="mostrarFormPagoGlobal ? 'fa-times' : 'fa-plus'"></i> 
+              {{ mostrarFormPagoGlobal ? 'Cancelar' : 'Nuevo Pago' }}
+            </button>
+          </div>
+
+          <!-- Formulario Global de Pagos -->
+          <div class="p-4 bg-light rounded-4 border mb-4 animate-fade-in" *ngIf="mostrarFormPagoGlobal">
+            <h6 class="font-weight-bold text-dark mb-3"><i class="fas fa-receipt text-success me-1"></i> {{ editandoPagoGlobalId ? 'Editar' : 'Registrar' }} Recibo de Caja</h6>
+            <form [formGroup]="pagoGlobalForm" (ngSubmit)="guardarPagoGlobal()">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label small font-weight-bold text-secondary">Cliente / Suscriptor</label>
+                  <select class="form-select form-select-sm" formControlName="clienteId">
+                    <option [ngValue]="null" disabled>Selecciona un cliente</option>
+                    <option *ngFor="let c of clientes" [ngValue]="c.id_cli || c.id">{{ c.nombre }} ({{ c.cedula }})</option>
+                  </select>
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label small font-weight-bold text-secondary">Monto Pagado ($)</label>
+                  <input type="number" class="form-control form-control-sm" formControlName="monto">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label small font-weight-bold text-secondary">Medio de Pago</label>
+                  <select class="form-select form-select-sm" formControlName="metodoPago">
+                    <option value="PSE">PSE / Pago Digital</option>
+                    <option value="Efectivo">Efectivo en Caja</option>
+                    <option value="Transferencia">Transferencia Bancaria</option>
+                    <option value="Tarjeta">Tarjeta Débito/Crédito</option>
+                  </select>
+                </div>
+                <div class="col-12 text-end mt-3">
+                  <button type="submit" class="btn btn-sm btn-success font-weight-bold" [disabled]="pagoGlobalForm.invalid">
+                    <i class="fas fa-save me-1"></i> Guardar Pago
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <div *ngIf="cargando" class="text-center py-5">
+            <div class="spinner-border text-success" role="status">
+              <span class="visually-hidden">Cargando...</span>
+            </div>
+          </div>
+
+          <div *ngIf="!cargando" class="table-responsive">
+            <table class="table table-hover align-middle custom-saas-table">
+              <thead>
+                <tr>
+                  <th># Transacción</th>
+                  <th>Cliente</th>
+                  <th>Método</th>
+                  <th>Fecha y Hora</th>
+                  <th class="text-end">Monto Cobrado</th>
+                  <th class="text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let p of pagosGlobales">
+                  <td><strong>REC-{{ p.id_pago || '000' }}</strong></td>
+                  <td>{{ p.cliente?.nombre || 'Suscriptor' }}</td>
+                  <td><span class="badge bg-secondary-light text-secondary">{{ p.metodoPago }}</span></td>
+                  <td>{{ (p.fechaPago | date:'dd/MM/yyyy HH:mm') || 'Registrado' }}</td>
+                  <td class="text-end text-success font-monospace font-weight-bold">
+                    {{ p.monto | currency:'COP':'symbol-narrow':'1.0-0' }}
+                  </td>
+                  <td class="text-center">
+                    <button class="btn btn-sm btn-light text-primary me-2" (click)="abrirEditarPagoGlobal(p)" title="Editar">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light text-danger" (click)="eliminarPagoGlobal(p.id_pago)" title="Eliminar">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="pagosGlobales.length === 0">
+                  <td colspan="6" class="text-center py-5 text-muted">No se han registrado pagos en caja.</td>
                 </tr>
               </tbody>
             </table>
@@ -694,6 +855,7 @@
                   <th>Suscriptor</th>
                   <th>Periodo</th>
                   <th>Consumo</th>
+                  <th>Convenio</th>
                   <th>Total Cobrado</th>
                   <th>Estado</th>
                   <th class="text-end">Acciones</th>
@@ -714,6 +876,21 @@
                     <span class="badge bg-secondary-light text-secondary">
                       {{ fac.consumo || 0 }} m³
                     </span>
+                    <span class="d-block text-muted font-size-xs mt-1" *ngIf="fac.totalPagar != null && fac.valorCuota != null">
+                      $ {{ (fac.totalPagar - fac.valorCuota) | number:'1.0-0' }}
+                    </span>
+                  </td>
+                  <td>
+                    <div *ngIf="fac.financiacion">
+                      <span class="d-block font-size-sm font-weight-bold text-dark text-truncate" style="max-width: 150px;" [title]="fac.financiacion.concepto">{{ fac.financiacion.concepto }}</span>
+                      <span class="d-block text-muted font-size-xs">Cuota: {{ fac.valorCuota | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+                      <span class="badge mt-1" 
+                            [ngClass]="fac.estado === 1 ? 'bg-success text-white' : (fac.financiacion.saldoPendiente === 0 ? 'bg-success text-white' : 'bg-warning text-dark')"
+                            style="font-size: 0.65rem;">
+                        {{ fac.estado === 1 ? 'Cuota Pagada' : (fac.financiacion.saldoPendiente === 0 ? 'Finalizado' : 'Cuota Pendiente') }}
+                      </span>
+                    </div>
+                    <span *ngIf="!fac.financiacion" class="text-muted font-size-sm">-</span>
                   </td>
                   <td class="text-primary font-weight-bold font-monospace">{{ fac.totalPagar | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
                   <td>
@@ -728,7 +905,7 @@
                   </td>
                 </tr>
                 <tr *ngIf="facturasGlobales.length === 0">
-                  <td colspan="7" class="text-center py-5 text-muted">No se han emitido facturas en el sistema.</td>
+                  <td colspan="8" class="text-center py-5 text-muted">No se han emitido facturas en el sistema.</td>
                 </tr>
               </tbody>
             </table>
@@ -835,112 +1012,99 @@
       <!-- VISTA: GESTIÓN DE LECTURAS (CRUD COMPLETO)    -->
       <!-- ============================================= -->
       <div *ngIf="currentView === 'lecturas'" class="animate-fade-in">
-        <div class="row g-4">
-          <!-- Columna Izquierda: Listado de Lecturas -->
-          <div class="col-lg-7">
-            <div class="dashboard-table-card card-shadow p-4 bg-white rounded-4">
-              <h5 class="mb-4 text-dark font-weight-bold">
-                <i class="fas fa-tachometer-alt text-primary me-2"></i>Historial de Lecturas Registradas
-              </h5>
-              
-              <div *ngIf="cargando" class="text-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                  <span class="visually-hidden">Cargando...</span>
-                </div>
-              </div>
-
-              <div *ngIf="!cargando" class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                <table class="table table-hover align-middle custom-saas-table">
-                  <thead>
-                    <tr>
-                      <th>Medidor</th>
-                      <th>Valor Lectura</th>
-                      <th>Fecha Toma</th>
-                      <th>Observaciones</th>
-                      <th class="text-end">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let lec of lecturasGlobales">
-                      <td>
-                        <strong class="text-dark">#{{ lec.idMedidor }}</strong>
-                        <span class="d-block text-muted font-size-xs">Cliente ID: {{ lec.cliente?.id_cli || '-' }}</span>
-                      </td>
-                      <td class="font-weight-bold text-primary font-monospace">{{ lec.valorLectura }} m³</td>
-                      <td>{{ lec.fechaToma | date:'dd/MM/yyyy' }}</td>
-                      <td class="text-muted font-size-sm">{{ lec.observaciones || '-' }}</td>
-                      <td class="text-end">
-                        <div class="d-flex justify-content-end gap-1">
-                          <button class="btn btn-sm btn-icon text-muted" (click)="abrirEditarLectura(lec)" title="Editar Lectura">
-                            <i class="fas fa-edit"></i>
-                          </button>
-                          <button class="btn btn-sm btn-icon text-danger" (click)="eliminarLectura(lec)" title="Eliminar Lectura">
-                            <i class="fas fa-trash"></i>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr *ngIf="lecturasGlobales.length === 0">
-                      <td colspan="5" class="text-center py-5 text-muted">No se han registrado lecturas en el sistema.</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
+        <div class="dashboard-table-card card-shadow p-4">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+            <h5 class="mb-0 text-dark font-weight-bold">
+              <i class="fas fa-tachometer-alt text-primary me-2"></i>Historial de Lecturas Registradas
+            </h5>
+            <button class="btn btn-sm btn-primary font-weight-bold" (click)="mostrarFormLecturaGlobal = !mostrarFormLecturaGlobal">
+              <i class="fas" [ngClass]="mostrarFormLecturaGlobal ? 'fa-times' : 'fa-plus'"></i> 
+              {{ mostrarFormLecturaGlobal ? 'Cancelar' : 'Nueva Lectura' }}
+            </button>
           </div>
 
-          <!-- Columna Derecha: Formulario Crear / Editar -->
-          <div class="col-lg-5">
-            <div class="card-form-premium card-shadow border-0">
-              <div class="card-form-header bg-primary text-white p-4 rounded-top-4">
-                <h5 class="mb-1 text-white font-weight-bold">
-                  <i class="fas fa-edit me-2"></i>{{ editandoLecturaId ? 'Actualizar Lectura de Medidor' : 'Registrar Nueva Lectura' }}
-                </h5>
-                <p class="text-white-50 small mb-0">
-                  {{ editandoLecturaId ? 'Modifique los campos necesarios para actualizar la lectura en el sistema.' : 'Ingrese el medidor y la lectura actual para procesar la facturación.' }}
-                </p>
-              </div>
-
-              <form [formGroup]="lecturaCrudForm" (ngSubmit)="guardarLecturaCrud()" class="p-4 bg-white rounded-bottom-4">
-                <div class="mb-3">
-                  <label class="form-label text-dark font-weight-semibold">Medidor (Número / ID)</label>
-                  <input type="number" formControlName="idMedidor" class="form-control" placeholder="Ej: 1234">
+          <!-- Formulario Global de Lectura -->
+          <div class="p-4 bg-light rounded-4 border mb-4 animate-fade-in" *ngIf="mostrarFormLecturaGlobal">
+            <h6 class="font-weight-bold text-dark mb-3"><i class="fas fa-tachometer-alt text-primary me-1"></i> {{ editandoLecturaId ? 'Actualizar' : 'Registrar' }} Lectura de Medidor</h6>
+            <form [formGroup]="lecturaCrudForm" (ngSubmit)="guardarLecturaCrud()">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label small font-weight-bold text-secondary">Medidor Asignado</label>
+                  <select class="form-select form-select-sm" formControlName="idMedidor">
+                    <option [ngValue]="null" disabled>Selecciona un medidor</option>
+                    <option *ngFor="let m of medidores" [ngValue]="$any(m).id_med || m.id">N° {{ $any(m).numeroMedidor || $any(m).numero_medidor }} - Cliente: {{ $any(m).cliente?.nombre || 'Sin cliente' }}</option>
+                  </select>
                   <div class="text-danger small mt-1" *ngIf="lecturaCrudForm.get('idMedidor')?.touched && lecturaCrudForm.get('idMedidor')?.invalid">
-                    El ID de medidor es obligatorio
+                    Seleccione un medidor válido
                   </div>
                 </div>
-
-                <div class="mb-3">
-                  <label class="form-label text-dark font-weight-semibold">Lectura Actual (m³)</label>
-                  <input type="number" formControlName="valorLectura" class="form-control" placeholder="Ej: 245">
+                <div class="col-md-6">
+                  <label class="form-label small font-weight-bold text-secondary">Lectura Actual (m³)</label>
+                  <input type="number" formControlName="valorLectura" class="form-control form-control-sm" placeholder="Ej: 245">
                   <div class="text-danger small mt-1" *ngIf="lecturaCrudForm.get('valorLectura')?.touched && lecturaCrudForm.get('valorLectura')?.invalid">
                     La lectura actual debe ser mayor o igual a 0
                   </div>
                 </div>
-
-                <div class="mb-3">
-                  <label class="form-label text-dark font-weight-semibold">Fecha de Toma</label>
-                  <input type="date" formControlName="fechaToma" class="form-control">
+                <div class="col-md-6">
+                  <label class="form-label small font-weight-bold text-secondary">Fecha de Toma</label>
+                  <input type="date" formControlName="fechaToma" class="form-control form-control-sm">
                   <div class="text-danger small mt-1" *ngIf="lecturaCrudForm.get('fechaToma')?.touched && lecturaCrudForm.get('fechaToma')?.invalid">
                     La fecha es obligatoria
                   </div>
                 </div>
-
-                <div class="mb-3">
-                  <label class="form-label text-dark font-weight-semibold">Observaciones / Zona</label>
-                  <textarea formControlName="observaciones" class="form-control" rows="3" placeholder="Ej: Medidor empañado / Sector Alto"></textarea>
+                <div class="col-md-6">
+                  <label class="form-label small font-weight-bold text-secondary">Observaciones / Zona</label>
+                  <input type="text" formControlName="observaciones" class="form-control form-control-sm" placeholder="Ej: Medidor empañado / Sector Alto">
                 </div>
-
-                <div class="d-flex justify-content-end gap-2 pt-3 border-top">
-                  <button type="button" class="btn btn-light rounded-pill px-4" (click)="cancelarEdicionLectura()">
-                    Cancelar
-                  </button>
-                  <button type="submit" class="btn btn-primary rounded-pill px-4" [disabled]="lecturaCrudForm.invalid">
-                    {{ editandoLecturaId ? 'Actualizar Lectura' : 'Guardar Lectura' }}
+                <div class="col-12 text-end mt-3">
+                  <button type="submit" class="btn btn-sm btn-primary font-weight-bold" [disabled]="lecturaCrudForm.invalid">
+                    <i class="fas fa-save me-1"></i> {{ editandoLecturaId ? 'Actualizar Lectura' : 'Guardar Lectura' }}
                   </button>
                 </div>
-              </form>
+              </div>
+            </form>
+          </div>
+
+          <div *ngIf="cargando" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Cargando...</span>
             </div>
+          </div>
+
+          <div *ngIf="!cargando" class="table-responsive">
+            <table class="table table-hover align-middle custom-saas-table">
+              <thead>
+                <tr>
+                  <th>Medidor</th>
+                  <th>Valor Lectura</th>
+                  <th>Fecha Toma</th>
+                  <th>Observaciones</th>
+                  <th class="text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let lec of lecturasGlobales">
+                  <td>
+                    <strong class="text-dark">N° {{ lec.medidor?.numeroMedidor || lec.idMedidor || '-' }}</strong>
+                    <span class="d-block text-muted font-size-xs">Cliente: {{ lec.medidor?.cliente?.nombre || '-' }}</span>
+                  </td>
+                  <td class="font-weight-bold text-primary font-monospace">{{ lec.valorLectura }} m³</td>
+                  <td>{{ (lec.fechaToma | date:'dd/MM/yyyy') || 'Sin fecha' }}</td>
+                  <td class="text-muted font-size-sm">{{ lec.observaciones || '-' }}</td>
+                  <td class="text-center">
+                    <button class="btn btn-sm btn-light text-primary me-2" (click)="abrirEditarLectura(lec)" title="Editar Lectura">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light text-danger" (click)="eliminarLectura(lec)" title="Eliminar Lectura">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="lecturasGlobales.length === 0">
+                  <td colspan="5" class="text-center py-5 text-muted">No se han registrado lecturas en el sistema.</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

@@ -19,4 +19,5 @@ export interface Factura {
   cliente?: Cliente;
   historialConsumo?: HistorialConsumo;
   lectura?: any;
+  financiacion?: any;
 }

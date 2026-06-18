@@ -1,9 +1,12 @@
 export interface Operador {
-    idOperador?: number;
+    id_oper?: number;
     nombre: string;
-    apellido: string;
-    cedula: string;
-    telefono: string;
-    especialidad: string; // Ej: "Mantenimiento", "Lecturas", "Reparaciones"
-    estado: string;       // Ej: "Activo", "En campo"
+    tel?: string;
+    cedula?: number;
+    email?: string;
+    password?: string;
+    direccion?: string;
+    salario?: number;
+    zonaAsignada?: string;
+    rol?: string;
 }

@@ -11,6 +11,12 @@ import { HistorialConsumo } from '../../core/Models/historialConsumo.model';
 import { Financiacion } from '../../core/Models/financiacion.model';
 import { LecturaService } from '../../core/Services/Lectura.service';
 import { Lectura } from '../../core/Models/lectura.model';
+import { MedidorService } from '../../core/Services/Medidor.service';
+import { medidor } from '../../core/Models/medidor.model';
+import { ReporteDanoService } from '../../core/Services/ReporteDano.service';
+import { ReporteDano } from '../../core/Models/ReporteDano.model';
+import { OperadorService } from '../../core/Services/Operador.service';
+import { Operador } from '../../core/Models/operador.model';
 
 @Component({
   selector: 'app-administrador',
@@ -61,11 +67,34 @@ export class AdministradorComponent implements OnInit {
   
   // Variables de UI
   mostrarFormFinan = false;
+  mostrarFormPago = false;
+
+  // Variables CRUD Global
+  pagoGlobalForm: FormGroup;
+  finanGlobalForm: FormGroup;
+  mostrarFormPagoGlobal = false;
+  mostrarFormFinanGlobal = false;
+  editandoPagoGlobalId: number | null = null;
+  editandoFinanGlobalId: number | null = null;
 
   // Lecturas CRUD
   lecturasGlobales: Lectura[] = [];
   lecturaCrudForm: FormGroup;
   editandoLecturaId: number | null = null;
+  mostrarFormLecturaGlobal = false;
+  medidores: medidor[] = [];
+
+  // Medidores CRUD
+  mostrarFormMedidorGlobal = false;
+  medidorCrudForm: FormGroup;
+  editandoMedidorId: number | null = null;
+  operadores: Operador[] = [];
+
+  // Daños CRUD
+  danosGlobales: ReporteDano[] = [];
+  mostrarFormDanoGlobal = false;
+  danoCrudForm: FormGroup;
+  editandoDanoId: number | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -74,7 +103,10 @@ export class AdministradorComponent implements OnInit {
     private pagosService: PagosService,
     private finanService: FinanciacionService,
     private facturaService: FacturaService,
-    private lecturaService: LecturaService
+    private lecturaService: LecturaService,
+    private medidorService: MedidorService,
+    private reporteDanoService: ReporteDanoService,
+    private operadorService: OperadorService
   ) {
     // Inicializar Formulario de Clientes
     this.clienteForm = this.fb.group({
@@ -109,6 +141,22 @@ export class AdministradorComponent implements OnInit {
       saldoPendiente: [0, [Validators.required, Validators.min(0)]]
     });
 
+    this.pagoGlobalForm = this.fb.group({
+      clienteId: [null, Validators.required],
+      monto: [0, [Validators.required, Validators.min(1)]],
+      metodoPago: ['PSE', Validators.required],
+      estado: [1, Validators.required]
+    });
+
+    this.finanGlobalForm = this.fb.group({
+      clienteId: [null, Validators.required],
+      concepto: ['', Validators.required],
+      montoTotal: [0, [Validators.required, Validators.min(1)]],
+      numeroCuotas: [6, [Validators.required, Validators.min(1)]],
+      cuotaMensual: [0, [Validators.required, Validators.min(1)]],
+      saldoPendiente: [0, [Validators.required, Validators.min(0)]]
+    });
+
     // Inicializar Formulario de Facturación
     this.facturaForm = this.fb.group({
       id_cli: [null, Validators.required],
@@ -130,6 +178,24 @@ export class AdministradorComponent implements OnInit {
       fechaToma: ['', Validators.required],
       observaciones: [''],
       idOperador: [1]
+    });
+
+    this.medidorCrudForm = this.fb.group({
+      id_med: [null],
+      numeroMedidor: [null, [Validators.required, Validators.min(1)]],
+      fechaInstalacion: [new Date().toISOString().substring(0, 10), Validators.required],
+      estado: ['1', Validators.required],
+      clienteId: [null, Validators.required],
+      operadorId: [null, Validators.required]
+    });
+
+    this.danoCrudForm = this.fb.group({
+      id_dano: [null],
+      descripcion: ['', Validators.required],
+      fechaReporte: [new Date().toISOString().substring(0, 10), Validators.required],
+      estadoReparacion: ['Pendiente', Validators.required],
+      medidorId: [null, Validators.required],
+      operadorId: [null]
     });
 
     this.setupFacturaCalculations();
@@ -176,13 +242,22 @@ export class AdministradorComponent implements OnInit {
   // Carga inicial y actualización de todas las colecciones del sistema
   cargarDatosDashboard() {
     this.cargarClientes();
+    this.cargarMedidores();
     this.cargarConsumosGlobales();
     this.cargarPagosGlobales();
     this.cargarFinanciacionesGlobales();
     this.cargarFacturas();
+    this.cargarLecturasGlobales();
   }
 
   // --- MÉTODOS DE DATOS ---
+
+  cargarMedidores() {
+    this.medidorService.listar().subscribe({
+      next: (data) => this.medidores = data,
+      error: () => console.error('Error al cargar medidores')
+    });
+  }
 
   cargarClientes() {
     this.cargando = true;
@@ -224,6 +299,134 @@ export class AdministradorComponent implements OnInit {
         this.financiacionesGlobales = data;
       }
     });
+  }
+
+  // ==========================================
+  // CRUD GLOBAL PAGOS
+  // ==========================================
+  abrirEditarPagoGlobal(pago: Pago) {
+    this.editandoPagoGlobalId = pago.id_pago || null;
+    this.mostrarFormPagoGlobal = true;
+    this.pagoGlobalForm.patchValue({
+      clienteId: pago.cliente?.id_cli || pago.id_cli,
+      monto: pago.monto,
+      metodoPago: pago.metodoPago,
+      estado: pago.estado
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  eliminarPagoGlobal(id?: number) {
+    if (!id) return;
+    if (confirm('¿Está seguro de eliminar este pago?')) {
+      this.pagosService.eliminar(id).subscribe({
+        next: () => {
+          this.mensaje = 'Pago eliminado correctamente.';
+          this.cargarPagosGlobales();
+        },
+        error: () => this.error = 'Error al eliminar el pago.'
+      });
+    }
+  }
+
+  guardarPagoGlobal() {
+    if (this.pagoGlobalForm.invalid) return;
+    const val = this.pagoGlobalForm.value;
+    const payload: Pago = {
+      monto: val.monto,
+      metodoPago: val.metodoPago,
+      estado: val.estado,
+      cliente: { id_cli: val.clienteId }
+    };
+
+    if (this.editandoPagoGlobalId) {
+      this.pagosService.actualizar(this.editandoPagoGlobalId, payload).subscribe({
+        next: () => {
+          this.mensaje = 'Pago actualizado correctamente.';
+          this.mostrarFormPagoGlobal = false;
+          this.editandoPagoGlobalId = null;
+          this.pagoGlobalForm.reset({ monto: 0, metodoPago: 'PSE', estado: 1 });
+          this.cargarPagosGlobales();
+        },
+        error: () => this.error = 'Error al actualizar el pago.'
+      });
+    } else {
+      this.pagosService.crear(payload).subscribe({
+        next: () => {
+          this.mensaje = 'Pago registrado exitosamente.';
+          this.mostrarFormPagoGlobal = false;
+          this.pagoGlobalForm.reset({ monto: 0, metodoPago: 'PSE', estado: 1 });
+          this.cargarPagosGlobales();
+        },
+        error: () => this.error = 'Error al crear el pago.'
+      });
+    }
+  }
+
+  // ==========================================
+  // CRUD GLOBAL FINANCIACIONES
+  // ==========================================
+  abrirEditarFinanGlobal(fin: Financiacion) {
+    this.editandoFinanGlobalId = fin.id_finan || null;
+    this.mostrarFormFinanGlobal = true;
+    this.finanGlobalForm.patchValue({
+      clienteId: fin.cliente?.id_cli || null,
+      concepto: fin.concepto,
+      montoTotal: fin.montoTotal,
+      numeroCuotas: fin.numeroCuotas || fin.numero_cuotas,
+      cuotaMensual: fin.cuotaMensual,
+      saldoPendiente: fin.saldoPendiente !== undefined ? fin.saldoPendiente : fin.montoTotal
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  eliminarFinanGlobal(id?: number) {
+    if (!id) return;
+    if (confirm('¿Está seguro de eliminar este convenio de financiación?')) {
+      this.finanService.eliminar(id).subscribe({
+        next: () => {
+          this.mensaje = 'Convenio eliminado correctamente.';
+          this.cargarFinanciacionesGlobales();
+        },
+        error: () => this.error = 'Error al eliminar el convenio.'
+      });
+    }
+  }
+
+  guardarFinanGlobal() {
+    if (this.finanGlobalForm.invalid) return;
+    const val = this.finanGlobalForm.value;
+    const payload: Financiacion = {
+      concepto: val.concepto,
+      montoTotal: val.montoTotal,
+      numeroCuotas: val.numeroCuotas,
+      cuotaMensual: val.cuotaMensual,
+      saldoPendiente: val.saldoPendiente,
+      cliente: { id_cli: val.clienteId }
+    };
+
+    if (this.editandoFinanGlobalId) {
+      this.finanService.actualizar(this.editandoFinanGlobalId, payload).subscribe({
+        next: () => {
+          this.mensaje = 'Convenio actualizado correctamente.';
+          this.mostrarFormFinanGlobal = false;
+          this.editandoFinanGlobalId = null;
+          this.finanGlobalForm.reset({ montoTotal: 0, numeroCuotas: 6, cuotaMensual: 0, saldoPendiente: 0 });
+          this.cargarFinanciacionesGlobales();
+        },
+        error: () => this.error = 'Error al actualizar el convenio.'
+      });
+    } else {
+      this.finanService.crear(payload).subscribe({
+        next: () => {
+          this.mensaje = 'Convenio creado exitosamente.';
+          this.mostrarFormFinanGlobal = false;
+          this.finanGlobalForm.reset({ montoTotal: 0, numeroCuotas: 6, cuotaMensual: 0, saldoPendiente: 0 });
+          this.cargarFinanciacionesGlobales();
+        },
+        error: () => this.error = 'Error al crear el convenio.'
+      });
+    }
   }
 
   cargarFacturas() {
@@ -447,7 +650,6 @@ export class AdministradorComponent implements OnInit {
       monto: val.monto,
       metodoPago: val.metodoPago,
       estado: val.estado,
-      id_cli: this.clienteSeleccionado.id_cli || this.clienteSeleccionado.id,
       cliente: { id_cli: this.clienteSeleccionado.id_cli || this.clienteSeleccionado.id }
     };
 
@@ -455,6 +657,7 @@ export class AdministradorComponent implements OnInit {
       next: () => {
         this.mensaje = 'Pago cobrado y registrado en caja.';
         this.pagoForm.reset({ monto: 0, metodoPago: 'PSE', estado: 1 });
+        this.mostrarFormPago = false;
         this.cargarDetallesCliente();
       },
       error: () => {
@@ -664,6 +867,7 @@ export class AdministradorComponent implements OnInit {
 
   abrirEditarLectura(lec: Lectura) {
     this.editandoLecturaId = lec.idLectura || (lec as any).id_lec || null;
+    this.mostrarFormLecturaGlobal = true;
     this.lecturaCrudForm.patchValue({
       idLectura: this.editandoLecturaId,
       idMedidor: lec.idMedidor,
@@ -672,17 +876,18 @@ export class AdministradorComponent implements OnInit {
       observaciones: lec.observaciones,
       idOperador: lec.idOperador || 1
     });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   cancelarEdicionLectura() {
     this.editandoLecturaId = null;
+    this.mostrarFormLecturaGlobal = false;
     this.lecturaCrudForm.reset({
       idLectura: null,
       idMedidor: null,
       valorLectura: 0,
       fechaToma: new Date().toISOString().substring(0, 10),
-      observaciones: '',
-      idOperador: 1
+      observaciones: ''
     });
   }
 
@@ -696,8 +901,7 @@ export class AdministradorComponent implements OnInit {
       valorLectura: val.valorLectura,
       fechaToma: val.fechaToma,
       observaciones: val.observaciones,
-      idMedidor: val.idMedidor,
-      idOperador: val.idOperador || 1
+      idMedidor: val.idMedidor
     };
 
     this.cargando = true;

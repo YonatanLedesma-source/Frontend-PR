@@ -17,6 +17,10 @@ export class OperadorService {
         return this.http.post<Operador>(this.url, operador);
     }
 
+    obtenerPorCorreo(correo: string) {
+        return this.http.get<Operador>(`${this.url}/correo/${correo}`);
+    }
+
     eliminar(id: number) {
         return this.http.delete(`${this.url}/${id}`);
     }

@@ -1,37 +1,421 @@
-<div class="operador-container">
-  <h2 class="title-tech">Personal Operativo (Fontaneros)</h2>
+<!-- ============================================================ -->
+<!-- VISTA PRINCIPAL: LISTADO DE CLIENTES -->
+<!-- ============================================================ -->
+<div class="op-wrapper" *ngIf="!selectedCliente">
 
-  <div class="card-form">
-    <div class="input-group">
-      <input type="text" [(ngModel)]="nuevoOperador.nombre" name="nombre" placeholder="Nombre completo">
-      <input type="text" [(ngModel)]="nuevoOperador.cedula" name="cedula" placeholder="Cédula">
-      <select [(ngModel)]="nuevoOperador.especialidad" name="especialidad">
-        <option value="">Seleccione Especialidad</option>
-        <option value="Mantenimiento">Mantenimiento</option>
-        <option value="Toma de Lecturas">Toma de Lecturas</option>
-      </select>
-      <button (click)="registrar()" class="btn-action">Añadir Operador</button>
+  <!-- HEADER CON PERFIL DEL OPERADOR -->
+  <div class="op-header">
+    <div class="op-header__info">
+      <div class="op-avatar">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" fill="currentColor"/>
+          <path d="M20.5899 22C20.5899 18.13 16.7399 15 11.9999 15C7.25991 15 3.40991 18.13 3.40991 22H20.5899Z" fill="currentColor"/>
+        </svg>
+      </div>
+      <div class="op-header__text">
+        <h1>Panel de Operador</h1>
+        <p>Bienvenido, <strong>{{ operadorActual?.nombre || 'Operador' }}</strong></p>
+      </div>
+    </div>
+    <div class="op-header__badges">
+      <div class="badge badge--zona" *ngIf="operadorActual">
+        <span class="badge__icon">📍</span>
+        <div class="badge__text">
+          <span class="badge__label">Zona Asignada</span>
+          <span class="badge__value">{{ operadorActual.zonaAsignada || 'Sin asignar' }}</span>
+        </div>
+      </div>
+      <div class="badge badge--stat">
+        <span class="badge__icon">👥</span>
+        <div class="badge__text">
+          <span class="badge__label">Total Clientes</span>
+          <span class="badge__value">{{ clientes.length }}</span>
+        </div>
+      </div>
     </div>
   </div>
 
-  <table class="tech-table">
-    <thead>
-      <tr>
-        <th>Nombre</th>
-        <th>Especialidad</th>
-        <th>Estado</th>
-        <th>Acciones</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let op of operadores">
-        <td>{{ op.nombre }}</td>
-        <td>{{ op.especialidad }}</td>
-        <td><span class="status-tag">{{ op.estado }}</span></td>
-        <td>
-          <button (click)="borrar(op.idOperador!)" class="btn-del">Quitar</button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <!-- BARRA DE BÚSQUEDA -->
+  <div class="op-search-section">
+    <h2 class="section-title">Listado de Clientes</h2>
+    <div class="search-box">
+      <svg class="search-box__icon" viewBox="0 0 24 24" fill="none">
+        <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+        <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <input
+        type="text"
+        [(ngModel)]="filtro"
+        (input)="filtrarClientes()"
+        placeholder="Buscar por nombre o cédula..."
+        class="search-box__input"
+      />
+      <span class="search-box__count" *ngIf="filtro">{{ clientesFiltrados.length }} resultado(s)</span>
+    </div>
+  </div>
+
+  <!-- TABLA DE CLIENTES -->
+  <div class="op-card">
+    <div class="op-table-wrapper">
+      <table class="op-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Cliente</th>
+            <th>Cédula</th>
+            <th>Dirección</th>
+            <th>Estado</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let cli of clientesFiltrados; let i = index" class="op-table__row">
+            <td class="op-table__num">{{ i + 1 }}</td>
+            <td class="op-table__name">
+              <div class="client-chip">
+                <div class="client-chip__avatar" translate="no">{{ cli.nombre.charAt(0) }}</div>
+                <span>{{ cli.nombre }}</span>
+              </div>
+            </td>
+            <td>{{ cli.cedula }}</td>
+            <td>{{ cli.direccion }}</td>
+            <td>
+              <span class="pill" [class.pill--active]="cli.estado" [class.pill--inactive]="!cli.estado">
+                {{ cli.estado ? 'Activo' : 'Inactivo' }}
+              </span>
+            </td>
+            <td>
+              <button class="btn-exp" (click)="abrirExpediente(cli)">
+                <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+                  <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="14 2 14 8 20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <polyline points="10 9 9 9 8 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Expediente
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="clientesFiltrados.length === 0">
+            <td colspan="6" class="op-table__empty">
+              <svg viewBox="0 0 64 64" fill="none" width="48" height="48">
+                <circle cx="32" cy="32" r="30" stroke="#ddd" stroke-width="2"/>
+                <path d="M22 38C22 38 26 32 32 32C38 32 42 38 42 38" stroke="#ddd" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="24" cy="26" r="2" fill="#ddd"/>
+                <circle cx="40" cy="26" r="2" fill="#ddd"/>
+              </svg>
+              <p>No se encontraron clientes</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- VISTA DE EXPEDIENTE -->
+<!-- ============================================================ -->
+<div class="op-wrapper" *ngIf="selectedCliente">
+
+  <!-- BOTÓN VOLVER -->
+  <button class="btn-back" (click)="cerrarExpediente()">
+    <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+      <polyline points="15 18 9 12 15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Volver al listado
+  </button>
+
+  <!-- HEADER DEL EXPEDIENTE -->
+  <div class="exp-header">
+    <div class="exp-header__avatar" translate="no">{{ selectedCliente.nombre.charAt(0) }}</div>
+    <div class="exp-header__info">
+      <h2>{{ selectedCliente.nombre }}</h2>
+      <div class="exp-header__details">
+        <span><strong>CC:</strong> {{ selectedCliente.cedula }}</span>
+        <span><strong>Dirección:</strong> {{ selectedCliente.direccion }}</span>
+        <span *ngIf="medidorCliente"><strong>Medidor N°:</strong> {{ medidorCliente.numeroMedidor }}</span>
+      </div>
+    </div>
+    <div class="exp-header__status" *ngIf="!medidorCliente">
+      <span class="pill pill--inactive">Sin medidor asignado</span>
+    </div>
+  </div>
+
+  <!-- AVISO SIN MEDIDOR -->
+  <div class="op-alert" *ngIf="!medidorCliente">
+    <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="2"/>
+      <line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <span>Este cliente no tiene un medidor asignado en el sistema.</span>
+  </div>
+
+  <!-- TABS -->
+  <div class="exp-tabs" *ngIf="medidorCliente">
+    <button class="exp-tab" [class.exp-tab--active]="activeTab === 'lecturas'" (click)="setTab('lecturas')">
+      <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+        <polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      Historial de Lecturas
+      <span class="tab-badge">{{ lecturas.length }}</span>
+    </button>
+    <button class="exp-tab" [class.exp-tab--active]="activeTab === 'danos'" (click)="setTab('danos')">
+      <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+        <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      Reportes de Daños
+      <span class="tab-badge tab-badge--danger" *ngIf="danos.length > 0">{{ danos.length }}</span>
+    </button>
+  </div>
+
+  <!-- ===== TAB: LECTURAS ===== -->
+  <div *ngIf="activeTab === 'lecturas' && medidorCliente">
+    <div class="op-card">
+      <div class="card-header">
+        <div class="card-header__title">
+          <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+            <line x1="3" y1="9" x2="21" y2="9" stroke="currentColor" stroke-width="2"/>
+            <line x1="9" y1="21" x2="9" y2="9" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          <h3>Historial de Lecturas</h3>
+        </div>
+        <button class="btn-primary" (click)="abrirRegistroLectura()">
+          <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+            <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Nueva Lectura
+        </button>
+      </div>
+
+      <div class="op-table-wrapper">
+        <table class="op-table">
+          <thead>
+            <tr>
+              <th>Fecha de Lectura</th>
+              <th>Lectura Anterior</th>
+              <th>Lectura Actual</th>
+              <th>Consumo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let lec of lecturas" class="op-table__row">
+              <td>
+                <span class="date-pill">{{ lec.fechaLectura }}</span>
+              </td>
+              <td><span class="mono-text">{{ lec.valorAnterior }} m³</span></td>
+              <td><span class="mono-text">{{ lec.valorActual }} m³</span></td>
+              <td>
+                <span class="consumo-chip">
+                  <svg viewBox="0 0 24 24" fill="none" width="12" height="12">
+                    <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  {{ lec.consumoM3 }} m³
+                </span>
+              </td>
+            </tr>
+            <tr *ngIf="lecturas.length === 0">
+              <td colspan="4" class="op-table__empty">
+                <svg viewBox="0 0 64 64" fill="none" width="40" height="40">
+                  <circle cx="32" cy="32" r="30" stroke="#ddd" stroke-width="2"/>
+                  <line x1="20" y1="32" x2="44" y2="32" stroke="#ddd" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="32" y1="20" x2="32" y2="44" stroke="#ddd" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <p>No hay lecturas registradas. ¡Registre la primera!</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TAB: DAÑOS ===== -->
+  <div *ngIf="activeTab === 'danos' && medidorCliente">
+    <div class="op-card">
+      <div class="card-header">
+        <div class="card-header__title">
+          <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="2"/>
+            <line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <h3>Reportes de Daños</h3>
+        </div>
+        <button class="btn-warning" (click)="abrirRegistroDano()">
+          <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+            <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Reportar Daño
+        </button>
+      </div>
+
+      <div class="op-table-wrapper">
+        <table class="op-table">
+          <thead>
+            <tr>
+              <th>Fecha Reporte</th>
+              <th>Descripción</th>
+              <th>Estado</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let dano of danos" class="op-table__row">
+              <td><span class="date-pill">{{ dano.fechaReporte }}</span></td>
+              <td class="op-table__desc">{{ dano.descripcion }}</td>
+              <td>
+                <span class="pill"
+                  [class.pill--pendiente]="dano.estadoReparacion === 'Pendiente'"
+                  [class.pill--proceso]="dano.estadoReparacion === 'En proceso'"
+                  [class.pill--active]="dano.estadoReparacion === 'Reparado'">
+                  {{ dano.estadoReparacion }}
+                </span>
+              </td>
+              <td>
+                <button class="btn-del" (click)="eliminarDano(dano.id_dano!)">
+                  <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+                    <polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M9 6V4h6v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                  Eliminar
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="danos.length === 0">
+              <td colspan="4" class="op-table__empty">
+                <svg viewBox="0 0 64 64" fill="none" width="40" height="40">
+                  <circle cx="32" cy="32" r="30" stroke="#ddd" stroke-width="2"/>
+                  <path d="M22 38C22 38 26 32 32 32C38 32 42 38 42 38" stroke="#ddd" stroke-width="2" stroke-linecap="round"/>
+                  <circle cx="24" cy="26" r="2" fill="#ddd"/>
+                  <circle cx="40" cy="26" r="2" fill="#ddd"/>
+                </svg>
+                <p>No hay daños reportados para este medidor.</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ============================================================ -->
+<!-- MODAL: NUEVA LECTURA -->
+<!-- ============================================================ -->
+<div class="op-modal-overlay" *ngIf="mostrarModalLectura" (click)="mostrarModalLectura = false">
+  <div class="op-modal" (click)="$event.stopPropagation()">
+    <div class="op-modal__header">
+      <div class="op-modal__icon op-modal__icon--blue">
+        <svg viewBox="0 0 24 24" fill="none" width="22" height="22">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+          <polyline points="12 6 12 12 16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <h3>Registrar Nueva Lectura</h3>
+        <p>Se generará la factura automáticamente al guardar.</p>
+      </div>
+      <button class="op-modal__close" (click)="mostrarModalLectura = false">✕</button>
+    </div>
+
+    <div class="op-modal__body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Lectura Anterior (m³)</label>
+          <input type="number" [(ngModel)]="nuevaLectura.valorAnterior" disabled class="form-input form-input--disabled">
+        </div>
+        <div class="form-group">
+          <label>Lectura Actual (m³) <span class="required">*</span></label>
+          <input type="number" [(ngModel)]="nuevaLectura.valorActual" (input)="calcularConsumo()" class="form-input" placeholder="Ingrese el valor actual">
+        </div>
+      </div>
+
+      <div class="consumo-preview" *ngIf="nuevaLectura.valorActual > nuevaLectura.valorAnterior">
+        <span class="consumo-preview__label">Consumo calculado</span>
+        <span class="consumo-preview__value">{{ nuevaLectura.consumoM3 }} m³</span>
+      </div>
+
+      <div class="form-group" style="margin-top: 1rem;">
+        <label>Observaciones</label>
+        <input type="text" [(ngModel)]="nuevaLectura.observaciones" class="form-input" placeholder="Observaciones opcionales...">
+      </div>
+    </div>
+
+    <div class="op-modal__footer">
+      <button class="btn-secondary" (click)="mostrarModalLectura = false">Cancelar</button>
+      <button class="btn-primary" (click)="guardarLectura()" [disabled]="nuevaLectura.valorActual <= nuevaLectura.valorAnterior">
+        <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+          <polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Guardar y Facturar
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- MODAL: REPORTAR DAÑO -->
+<!-- ============================================================ -->
+<div class="op-modal-overlay" *ngIf="mostrarModalDano" (click)="mostrarModalDano = false">
+  <div class="op-modal" (click)="$event.stopPropagation()">
+    <div class="op-modal__header">
+      <div class="op-modal__icon op-modal__icon--orange">
+        <svg viewBox="0 0 24 24" fill="none" width="22" height="22">
+          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="2"/>
+          <line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <h3>Reportar Daño en Medidor</h3>
+        <p>Medidor N° {{ medidorCliente?.numeroMedidor }}</p>
+      </div>
+      <button class="op-modal__close" (click)="mostrarModalDano = false">✕</button>
+    </div>
+
+    <div class="op-modal__body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fecha de Reporte</label>
+          <input type="date" [(ngModel)]="nuevoDano.fechaReporte" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>Estado Inicial</label>
+          <select [(ngModel)]="nuevoDano.estadoReparacion" class="form-input">
+            <option value="Pendiente">🔴 Pendiente</option>
+            <option value="En proceso">🟡 En proceso</option>
+            <option value="Reparado">🟢 Reparado</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top: 1rem;">
+        <label>Descripción del Problema <span class="required">*</span></label>
+        <textarea [(ngModel)]="nuevoDano.descripcion" class="form-input form-input--textarea" rows="3" placeholder="Ej: Fuga de agua en la entrada, medidor dañado, válvula rota..."></textarea>
+      </div>
+    </div>
+
+    <div class="op-modal__footer">
+      <button class="btn-secondary" (click)="mostrarModalDano = false">Cancelar</button>
+      <button class="btn-warning" (click)="guardarDano()" [disabled]="!nuevoDano.descripcion">
+        <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+          <polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Guardar Reporte
+      </button>
+    </div>
+  </div>
 </div>

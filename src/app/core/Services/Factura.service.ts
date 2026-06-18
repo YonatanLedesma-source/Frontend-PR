@@ -60,7 +60,8 @@ export class FacturaService {
             lecturaNueva: item.lecturaNueva,
             consumo: item.consumo,
             valorCuota: item.valorCuota,
-            fechaVencimiento: item.fechaVencimiento
+            fechaVencimiento: item.fechaVencimiento,
+            financiacion: item.financiacion
         };
     }
 
@@ -82,6 +83,7 @@ export class FacturaService {
             consumo: model.consumo,
             valorCuota: model.valorCuota,
             fechaVencimiento: model.fechaVencimiento,
+            financiacion: model.financiacion,
             // Agregando dependencias por defecto con IDs válidos que existen en la BD
             administrador: { id_adm: 3 },
             operador: { id_oper: 1 }
